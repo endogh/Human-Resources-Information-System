@@ -4,6 +4,7 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 import javax.persistence.*;
+import java.util.Date;
 
 @Data
 @SuperBuilder
@@ -22,12 +23,11 @@ public class Auth extends BaseEntity{
     private String photoUrl;
     private String secondName;
     private String surname;
-    private String birthDate;
+    private Date birthDate;
     private String birthPlace;
     private String identity;
     private String phone;
-    @OneToOne(fetch = FetchType.EAGER,cascade = CascadeType.ALL)
-    private Adress adress;
+
     @Enumerated(EnumType.STRING)
     private ERole role;
     @Enumerated(EnumType.STRING)
