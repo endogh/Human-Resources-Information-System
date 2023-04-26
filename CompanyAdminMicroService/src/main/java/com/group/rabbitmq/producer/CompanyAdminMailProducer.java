@@ -7,15 +7,15 @@ import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
-public class RegisterMailProducer {
+public class CompanyAdminMailProducer {
 
     private final RabbitTemplate rabbitTemplate;
 
     private String companyAdminDirectExchange = "company-admin-direct-exchange";
-    private String registerMailBindingKey = "register-mail-binding-key";
+    private String companyAdminPasswordBindingKey = "company-admin-password-binding-key";
 
     public void sendActivationCode(ActivateStatusModel model){
-        rabbitTemplate.convertAndSend(companyAdminDirectExchange,registerMailBindingKey,model);
+        rabbitTemplate.convertAndSend(companyAdminDirectExchange,companyAdminPasswordBindingKey,model);
     }
 
 }
