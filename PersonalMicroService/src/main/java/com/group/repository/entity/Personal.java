@@ -5,15 +5,15 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
+import javax.persistence.*;
 import java.util.Date;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@Entity
+@Table(name = "tblpersonal")
 public class Personal extends BaseEntity{
 
     @Id
@@ -35,7 +35,8 @@ public class Personal extends BaseEntity{
     private String phone;
     private String companyId;
     private EStatus status = EStatus.ACTIVE;
-
+    @OneToOne(cascade = CascadeType.ALL,fetch = FetchType.EAGER)
+    private Address address;
 
 
 }
