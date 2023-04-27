@@ -15,9 +15,5 @@ import javax.validation.constraints.Pattern;
 @AllArgsConstructor
 public class UpdatePasswordRequestDto {
     private Long id;
-    @NotBlank(message = "Password cannot be blank!")
-    @Pattern(message = "Password must be at least 8 characters, with at least one capital letter and a special character!",
-            regexp = "^(?=.[0-9])(?=.[a-z])(?=.[A-Z])(?=.[@#$%^&+=*!])(?=\\S+$).{8,}$")
     private String password;
-    private String repassword;
 }
