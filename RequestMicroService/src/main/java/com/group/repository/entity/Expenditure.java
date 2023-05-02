@@ -7,17 +7,18 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 
 import javax.persistence.*;
 import java.util.Date;
 
 @Data
-@Builder
+@SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
 @Table(name = "tblexpenditure")
-public class Expenditure {
+public class Expenditure extends BaseEntity{
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -27,10 +28,8 @@ public class Expenditure {
     @Enumerated(EnumType.STRING)
     private ExpenditureType expenditureType;
     private Double amount;
-    private Date startingDate;
     @Builder.Default
     private Date requestDate = new Date();
-    private Date endDate;
     private Date confirmDate;
     @Enumerated(EnumType.STRING)
     private Currency currency;
