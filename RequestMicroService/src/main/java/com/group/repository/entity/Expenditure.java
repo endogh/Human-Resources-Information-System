@@ -22,6 +22,8 @@ public class Expenditure extends BaseEntity{
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    private String personalName;
+    private String personalLastName;
     @Enumerated(EnumType.STRING)
     @Builder.Default
     private EStatus status =EStatus.PENDING;

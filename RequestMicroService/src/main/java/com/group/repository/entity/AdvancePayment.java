@@ -22,6 +22,8 @@ public class AdvancePayment extends BaseEntity{
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    private String personalName;
+    private String personalLastName;
     @Builder.Default
     private Date requestDate = new Date();
     private Date confirmDate;
