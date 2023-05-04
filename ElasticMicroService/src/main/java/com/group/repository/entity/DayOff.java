@@ -7,6 +7,7 @@ import lombok.experimental.SuperBuilder;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.elasticsearch.annotations.Document;
 
+import java.util.Comparator;
 import java.util.Date;
 
 @Data
@@ -15,7 +16,7 @@ import java.util.Date;
 @AllArgsConstructor
 @ToString
 @Document(indexName = "dayoff")
-public class DayOff extends BaseEntity{
+public class DayOff extends BaseEntity {
     @Id
     private String id;
     private String personalName;
@@ -29,4 +30,6 @@ public class DayOff extends BaseEntity{
     private EStatus status;
     private Long personalId;
     private Long dayOffRequestId;
+
+
 }
