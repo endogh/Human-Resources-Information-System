@@ -27,6 +27,8 @@ public class AdminServiceSecurityConfig {
         httpSecurity.csrf().disable();
         httpSecurity.authorizeRequests().antMatchers("/v3/api-docs/**","/swagger-ui/**","/api/v1/admin/**")
                 .permitAll().anyRequest().authenticated();
+//        httpSecurity.authorizeRequests().antMatchers("/v3/api-docs/**","/swagger-ui/**","/api/v1/admin/forgot")
+//                .permitAll().anyRequest().authenticated();
         httpSecurity.addFilterBefore(getJwtTokenFilter(), UsernamePasswordAuthenticationFilter.class);
         return httpSecurity.build();
     }
