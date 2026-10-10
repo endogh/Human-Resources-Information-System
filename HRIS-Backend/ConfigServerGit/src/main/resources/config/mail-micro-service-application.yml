@@ -1,0 +1,20 @@
+server:
+  port: 9096
+
+spring:
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+  mail:
+    host: localhost
+    port: 1025
+    username: hris@example.com
+    password: hris
+    properties:
+      mail:
+        smtp:
+          auth: false
+          starttls:
+            enable: false

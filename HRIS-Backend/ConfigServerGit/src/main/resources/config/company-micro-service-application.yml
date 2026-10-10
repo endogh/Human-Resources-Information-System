@@ -1,0 +1,14 @@
+server:
+  port: 9092
+
+spring:
+  data:
+    mongodb:
+      host: localhost
+      port: 27017
+      database: companydb
+      auto-index-creation: true
+
+redis:
+  host: localhost
+  port: 6379

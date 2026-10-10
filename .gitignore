@@ -1,2 +1,2 @@
-# Project exclude paths
-/.gradle/
+# Nested git repository (separate remote: endogh/HRIS.git)
+/HRIS-Frontend/

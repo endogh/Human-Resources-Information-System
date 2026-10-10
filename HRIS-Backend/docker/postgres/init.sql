@@ -1,0 +1,5 @@
+CREATE DATABASE authdb;
+CREATE DATABASE admindb;
+CREATE DATABASE companyadmindb;
+CREATE DATABASE personaldb;
+CREATE DATABASE requestdb;
