@@ -1,0 +1,54 @@
+# syntax=docker/dockerfile:1
+
+# ---------------------------------------------------------------------------
+# HRIS Backend image
+#
+# Satu image dipakai untuk semua service Spring Boot (config server, gateway,
+# dan microservice). docker-compose memilih jar mana yang dijalankan lewat
+# `command: ["/app/<service>.jar"]`.
+#
+# Build context : root repository
+#   docker build -f Dockerfile.backend -t hris-backend .
+# ---------------------------------------------------------------------------
+
+# ----------------------------- Build stage --------------------------------
+FROM eclipse-temurin:17-jdk AS builder
+
+WORKDIR /workspace
+
+# Salin sumber backend (build/ dan .gradle/ dikecualikan via .dockerignore)
+COPY HRIS-Backend/ ./
+
+RUN chmod +x gradlew \
+    && ./gradlew \
+        :ConfigServerGit:bootJar \
+        :AuthMicroService:bootJar \
+        :AdminMicroService:bootJar \
+        :CompanyMicroService:bootJar \
+        :CompanyAdminMicroService:bootJar \
+        :PersonalMicroService:bootJar \
+        :RequestMicroService:bootJar \
+        :ElasticMicroService:bootJar \
+        :MailModelService:bootJar \
+        :ApiGatewayService:bootJar \
+        -x test --no-daemon
+
+# ---------------------------- Runtime stage -------------------------------
+FROM amazoncorretto:17
+
+WORKDIR /app
+
+COPY --from=builder /workspace/ConfigServerGit/build/libs/ConfigServerGit-v.0.1.jar                /app/config-server.jar
+COPY --from=builder /workspace/ApiGatewayService/build/libs/ApiGatewayService-v.0.1.jar            /app/api-gateway.jar
+COPY --from=builder /workspace/AuthMicroService/build/libs/AuthMicroService-v.0.1.jar              /app/auth-service.jar
+COPY --from=builder /workspace/AdminMicroService/build/libs/AdminMicroService-v.0.1.jar            /app/admin-service.jar
+COPY --from=builder /workspace/CompanyMicroService/build/libs/CompanyMicroService-v.0.1.jar        /app/company-service.jar
+COPY --from=builder /workspace/CompanyAdminMicroService/build/libs/CompanyAdminMicroService-v.0.1.jar /app/company-admin-service.jar
+COPY --from=builder /workspace/PersonalMicroService/build/libs/PersonalMicroService-v.0.1.jar      /app/personal-service.jar
+COPY --from=builder /workspace/RequestMicroService/build/libs/RequestMicroService-v.0.1.jar        /app/request-service.jar
+COPY --from=builder /workspace/ElasticMicroService/build/libs/ElasticMicroService-v.0.1.jar        /app/elastic-service.jar
+COPY --from=builder /workspace/MailModelService/build/libs/MailModelService-v.0.1.jar              /app/mail-service.jar
+
+# Heap dapat diatur per-service lewat env JAVA_TOOL_OPTIONS (mis. -Xmx512m).
+ENTRYPOINT ["java", "-jar"]
+CMD ["/app/config-server.jar"]

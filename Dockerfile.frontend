@@ -1,0 +1,45 @@
+# syntax=docker/dockerfile:1
+
+# ---------------------------------------------------------------------------
+# HRIS Frontend image (Django + TailwindCSS, served by Gunicorn)
+#
+# Build context : root repository
+#   docker build -f Dockerfile.frontend -t hris-frontend .
+# ---------------------------------------------------------------------------
+
+# --------------------------- CSS build stage ------------------------------
+FROM node:20-alpine AS css
+
+WORKDIR /build
+
+COPY HRIS-Frontend/package.json HRIS-Frontend/package-lock.json ./
+RUN npm ci
+
+# Seluruh project Django disalin agar @source / auto-detection Tailwind
+# menemukan class di templates.
+COPY HRIS-Frontend/frontend/ ./frontend/
+RUN npm run css:build
+
+# ---------------------------- Runtime stage -------------------------------
+FROM python:3.12-slim AS runtime
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+COPY HRIS-Frontend/requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY HRIS-Frontend/frontend/ ./frontend/
+COPY --from=css /build/frontend/static/css/app.css ./frontend/static/css/app.css
+
+WORKDIR /app/frontend
+
+# Kumpulkan static files (CSS, JS) agar bisa disajikan WhiteNoise/Gunicorn.
+RUN python manage.py collectstatic --noinput
+
+EXPOSE 8000
+
+# Migrasi ringan (sessions/messages) lalu jalankan Gunicorn.
+CMD ["sh", "-c", "python manage.py migrate --noinput && exec gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3"]

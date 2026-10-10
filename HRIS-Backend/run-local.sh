@@ -17,6 +17,8 @@ set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$ROOT"
 
+COMPOSE_FILE="$ROOT/../docker-compose.yml"
+
 JAVA_HOME="${JAVA_HOME:-$HOME/.local/opt/jdk-17.0.20.1+1}"
 export JAVA_HOME
 export PATH="$JAVA_HOME/bin:$PATH"
@@ -68,7 +70,7 @@ case "${1:-start}" in
 
   start)
     echo "[1/4] Infrastruktur (docker compose)"
-    docker compose up -d
+    docker compose -f "$COMPOSE_FILE" up -d
     echo "[2/4] Config Server :8888"
     start_one config ConfigServerGit/build/libs/ConfigServerGit-v.0.1.jar 300m
     echo "      menunggu config server..."
@@ -95,7 +97,7 @@ case "${1:-start}" in
   down)
     "$0" stop
     echo "Mematikan container..."
-    docker compose down
+    docker compose -f "$COMPOSE_FILE" down
     ;;
 
   status)
@@ -103,7 +105,7 @@ case "${1:-start}" in
     ss -ltn 2>/dev/null | grep -E ":(8888|8080|9090|9091|9092|9093|9094|9095|9096|9100)\b" \
       | awk '{print $4}' | sed 's/.*://' | sort -n | tr '\n' ' '
     echo
-    docker compose ps --format '{{.Name}}\t{{.Status}}' 2>/dev/null
+    docker compose -f "$COMPOSE_FILE" ps --format '{{.Name}}\t{{.Status}}' 2>/dev/null
     ;;
 
   logs)

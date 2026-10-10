@@ -11,7 +11,7 @@ spring:
           enabled: false
       routes:
         - id: auth-service
-          uri: http://localhost:9090
+          uri: ${AUTH_SERVICE_URI:http://localhost:9090}
           predicates:
             - Path=/api/v1/auth/**
           filters:
@@ -21,7 +21,7 @@ spring:
                 fallbackUri: forward:/fallback/authservice
 
         - id: admin-service
-          uri: http://localhost:9091
+          uri: ${ADMIN_SERVICE_URI:http://localhost:9091}
           predicates:
             - Path=/api/v1/admin/**
           filters:
@@ -31,7 +31,7 @@ spring:
                 fallbackUri: forward:/fallback/adminservice
 
         - id: company-service
-          uri: http://localhost:9092
+          uri: ${COMPANY_SERVICE_URI:http://localhost:9092}
           predicates:
             - Path=/api/v1/company/**
           filters:
@@ -41,7 +41,7 @@ spring:
                 fallbackUri: forward:/fallback/companyservice
 
         - id: company-admin-service
-          uri: http://localhost:9093
+          uri: ${COMPANY_ADMIN_SERVICE_URI:http://localhost:9093}
           predicates:
             - Path=/api/v1/companyadmin/**
           filters:
@@ -51,7 +51,7 @@ spring:
                 fallbackUri: forward:/fallback/companyadminservice
 
         - id: personal-service
-          uri: http://localhost:9094
+          uri: ${PERSONAL_SERVICE_URI:http://localhost:9094}
           predicates:
             - Path=/api/v1/personal/**
           filters:
@@ -64,7 +64,7 @@ spring:
         # ElasticMicroService); the request-service route below still handles
         # the write paths (save/update/delete/confirm/decline/accept).
         - id: elastic-service
-          uri: http://localhost:9100
+          uri: ${ELASTIC_SERVICE_URI:http://localhost:9100}
           predicates:
             - Path=/api/v1/advancepayment/**,/api/v1/dayoff/**,/api/v1/expenditure/**
             - Method=GET
@@ -75,7 +75,7 @@ spring:
                 fallbackUri: forward:/fallback/elasticservice
 
         - id: request-service
-          uri: http://localhost:9095
+          uri: ${REQUEST_SERVICE_URI:http://localhost:9095}
           predicates:
             - Path=/api/v1/advancepayment/**,/api/v1/dayoff/**,/api/v1/expenditure/**
           filters:
