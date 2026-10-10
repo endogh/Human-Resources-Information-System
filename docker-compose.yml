@@ -1,0 +1,371 @@
+name: hris
+
+# ---------------------------------------------------------------------------
+# HRIS stack: infrastruktur + backend (Spring Cloud) + frontend (Django).
+#
+# Membangun image:
+#   docker compose up --build
+# Untuk image tanpa rebuild:
+#   docker compose up -d
+# ---------------------------------------------------------------------------
+
+x-backend-env: &backend-env
+  # Semua host infra memakai nama service docker-compose.
+  CONFIG_SERVER_URI: "http://config-server:8888"
+  POSTGRES_HOST: postgres
+  POSTGRES_PORT: "5432"
+  POSTGRES_USER: hris
+  POSTGRES_PASSWORD: hris
+  RABBITMQ_HOST: rabbitmq
+  RABBITMQ_PORT: "5672"
+  RABBITMQ_USER: guest
+  RABBITMQ_PASSWORD: guest
+  MONGO_HOST: mongo
+  MONGO_PORT: "27017"
+  REDIS_HOST: redis
+  REDIS_PORT: "6379"
+  ELASTICSEARCH_URI: "http://elasticsearch:9200"
+  MAIL_HOST: mailhog
+  MAIL_PORT: "1025"
+
+# Healthcheck bersama untuk service Spring Boot (mengandalkan env PORT).
+x-app-healthcheck: &app-health
+  test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/$${PORT}"]
+  interval: 10s
+  timeout: 5s
+  retries: 12
+  start_period: 40s
+
+services:
+  # ---------------------------- Infrastruktur ----------------------------
+  postgres:
+    image: postgres:15-alpine
+    container_name: hris-postgres
+    environment:
+      POSTGRES_USER: hris
+      POSTGRES_PASSWORD: hris
+      POSTGRES_DB: hris
+    ports:
+      - "5432:5432"
+    volumes:
+      - hris-pgdata:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hris -d hris"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  mongo:
+    image: mongo:6
+    container_name: hris-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - hris-mongodata:/data/db
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh --quiet --eval 'db.runCommand({ ping: 1 })' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: hris-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: hris-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.10
+    container_name: hris-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    ports:
+      - "9200:9200"
+    volumes:
+      - hris-esdata:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9200/_cluster/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: hris-mailhog
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
+  # ------------------------------- Backend --------------------------------
+  # Image hris-backend dibangun via Dockerfile.backend (context: root repo).
+  # Service lain memakai image yang sama dan cukup ganti `command` (jar).
+  config-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    image: hris-backend
+    container_name: hris-config-server
+    command: ["/app/config-server.jar"]
+    environment:
+      PORT: "8888"
+    ports:
+      - "8888:8888"
+    restart: on-failure
+    healthcheck:
+      <<: *app-health
+
+  auth-service:
+    image: hris-backend
+    container_name: hris-auth-service
+    command: ["/app/auth-service.jar"]
+    environment:
+      <<: *backend-env
+      PORT: "9090"
+    ports:
+      - "9090:9090"
+    depends_on:
+      config-server:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: on-failure
+    healthcheck:
+      <<: *app-health
+
+  admin-service:
+    image: hris-backend
+    container_name: hris-admin-service
+    command: ["/app/admin-service.jar"]
+    environment:
+      <<: *backend-env
+      PORT: "9091"
+    ports:
+      - "9091:9091"
+    depends_on:
+      config-server:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: on-failure
+    healthcheck:
+      <<: *app-health
+
+  company-service:
+    image: hris-backend
+    container_name: hris-company-service
+    command: ["/app/company-service.jar"]
+    environment:
+      <<: *backend-env
+      PORT: "9092"
+    ports:
+      - "9092:9092"
+    depends_on:
+      config-server:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: on-failure
+    healthcheck:
+      <<: *app-health
+
+  company-admin-service:
+    image: hris-backend
+    container_name: hris-company-admin-service
+    command: ["/app/company-admin-service.jar"]
+    environment:
+      <<: *backend-env
+      PORT: "9093"
+    ports:
+      - "9093:9093"
+    depends_on:
+      config-server:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: on-failure
+    healthcheck:
+      <<: *app-health
+
+  personal-service:
+    image: hris-backend
+    container_name: hris-personal-service
+    command: ["/app/personal-service.jar"]
+    environment:
+      <<: *backend-env
+      PORT: "9094"
+    ports:
+      - "9094:9094"
+    depends_on:
+      config-server:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: on-failure
+    healthcheck:
+      <<: *app-health
+
+  request-service:
+    image: hris-backend
+    container_name: hris-request-service
+    command: ["/app/request-service.jar"]
+    environment:
+      <<: *backend-env
+      PORT: "9095"
+    ports:
+      - "9095:9095"
+    depends_on:
+      config-server:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: on-failure
+    healthcheck:
+      <<: *app-health
+
+  elastic-service:
+    image: hris-backend
+    container_name: hris-elastic-service
+    command: ["/app/elastic-service.jar"]
+    environment:
+      <<: *backend-env
+      PORT: "9100"
+    ports:
+      - "9100:9100"
+    depends_on:
+      config-server:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+    restart: on-failure
+    healthcheck:
+      <<: *app-health
+
+  mail-service:
+    image: hris-backend
+    container_name: hris-mail-service
+    command: ["/app/mail-service.jar"]
+    environment:
+      <<: *backend-env
+      PORT: "9096"
+    ports:
+      - "9096:9096"
+    depends_on:
+      config-server:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: on-failure
+    healthcheck:
+      <<: *app-health
+
+  api-gateway:
+    image: hris-backend
+    container_name: hris-api-gateway
+    command: ["/app/api-gateway.jar"]
+    environment:
+      <<: *backend-env
+      PORT: "8080"
+      AUTH_SERVICE_URI: "http://auth-service:9090"
+      ADMIN_SERVICE_URI: "http://admin-service:9091"
+      COMPANY_SERVICE_URI: "http://company-service:9092"
+      COMPANY_ADMIN_SERVICE_URI: "http://company-admin-service:9093"
+      PERSONAL_SERVICE_URI: "http://personal-service:9094"
+      REQUEST_SERVICE_URI: "http://request-service:9095"
+      ELASTIC_SERVICE_URI: "http://elastic-service:9100"
+    ports:
+      - "8080:8080"
+    depends_on:
+      config-server:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+      admin-service:
+        condition: service_healthy
+      company-service:
+        condition: service_healthy
+      company-admin-service:
+        condition: service_healthy
+      personal-service:
+        condition: service_healthy
+      request-service:
+        condition: service_healthy
+      elastic-service:
+        condition: service_healthy
+      mail-service:
+        condition: service_healthy
+    restart: on-failure
+    healthcheck:
+      <<: *app-health
+
+  # ------------------------------- Frontend -------------------------------
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    image: hris-frontend
+    container_name: hris-frontend
+    environment:
+      DJANGO_SECRET_KEY: change-me-in-production
+      DJANGO_DEBUG: "0"
+      DJANGO_ALLOWED_HOSTS: "localhost,127.0.0.1,frontend"
+      HRIS_API_BASE_URL: "http://api-gateway:8080"
+      HRIS_API_TIMEOUT: "30"
+      HRIS_PAGE_SIZE_ADMIN: "5"
+      HRIS_PAGE_SIZE_PERSONAL: "10"
+    ports:
+      - "8000:8000"
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+    restart: on-failure
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/8000"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+volumes:
+  hris-pgdata:
+  hris-mongodata:
+  hris-esdata:

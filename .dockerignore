@@ -1,0 +1,19 @@
+# Git metadata
+.git
+**/.git
+
+# Local environment / secrets
+.env
+
+# Python
+**/venv/
+**/__pycache__/
+**/*.py[cod]
+**/*.sqlite3
+
+# Node
+**/node_modules/
+
+# Gradle / Java build output (rebuilt inside the image)
+HRIS-Backend/.gradle/
+HRIS-Backend/**/build/
